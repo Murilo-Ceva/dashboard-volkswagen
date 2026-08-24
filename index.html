@@ -83,5 +83,29 @@ function renderMap(){if(!map)return;if(markers)markers.remove();let groups=Objec
 function initMap(){map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:7}).setView([-14.2,-51.9],4);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'<a href="https://leafletjs.com/" target="_blank" rel="noopener noreferrer">Leaflet</a> | &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>'}).addTo(map)}
 function loadText(text,name){let raw=parseCSV(text);rows=adapt(raw).filter(r=>r.nf||r.dest||r.cte);if(!rows.length){alert('CSV sem linhas válidas.');return}document.body.classList.remove('noData');$('sourceInfo').textContent=`${name} | ${fmtN(rows.length)} NFs | mês: Prev. | Meta OTD: 96%`;setupFilters();let now=String(new Date().getMonth()+1).padStart(2,'0'),ms=[...new Set(rows.filter(r=>r.mesRef).map(r=>String(r.mesRef.getMonth()+1).padStart(2,'0')))];currentMonth=ms.includes(now)?now:(ms.sort().at(-1)||'');$('fMes').value=currentMonth;apply()}
 function decode64(s){let bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);let t=new TextDecoder('utf-8').decode(u);if((t.match(/�/g)||[]).length>10)t=new TextDecoder('windows-1252').decode(u);return t}
-$('importBtn').onclick=()=>$('file').click();$('file').onchange=async e=>{let b=await e.target.files[0].arrayBuffer(),u=new Uint8Array(b),t=new TextDecoder('utf-8').decode(u);if((t.match(/�/g)||[]).length>10)t=new TextDecoder('windows-1252').decode(u);loadText(t,e.target.files[0].name)};['search','fMes','fAno','fReg','fTsp','fUf','fCid','fStatus'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',apply));$('nav').onclick=e=>{let b=e.target.closest('button');if(!b)return;document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));currentPage=b.dataset.page;$(b.dataset.page).classList.add('active');$('fMes').value=currentPage==='aging'?'':currentMonth;configureStatusFilter();apply();if(b.dataset.page==='mapa')setTimeout(()=>{map.invalidateSize();renderMap()},80)};$('theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme?'':'dark';$('theme').textContent=document.documentElement.dataset.theme?'☀':'☾'};$('modalClose').onclick=()=>$('modal').classList.add('hide');$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.add('hide')};initMap();document.body.classList.add('noData');$('sourceInfo').textContent='Importe um CSV para iniciar | processamento local';$('donutG').innerHTML=`<div class="emptyState"><b>Nenhum CSV carregado</b><span>Clique em Importar CSV para carregar a base.</span></div>`;$('regBars').innerHTML=$('statusBars').innerHTML=$('tspBars').innerHTML='<div class="empty">Aguardando importação</div>';renderMap();
+$('importBtn').onclick=()=>$('file').click();$('file').onchange=async e=>{let b=await e.target.files[0].arrayBuffer(),u=new Uint8Array(b),t=new TextDecoder('utf-8').decode(u);if((t.match(/�/g)||[]).length>10)t=new TextDecoder('windows-1252').decode(u);loadText(t,e.target.files[0].name)};['search','fMes','fAno','fReg','fTsp','fUf','fCid','fStatus'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',apply));$('nav').onclick=e=>{let b=e.target.closest('button');if(!b)return;document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));currentPage=b.dataset.page;$(b.dataset.page).classList.add('active');$('fMes').value=currentPage==='aging'?'':currentMonth;configureStatusFilter();apply();if(b.dataset.page==='mapa')setTimeout(()=>{map.invalidateSize();renderMap()},80)};$('theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme?'':'dark';$('theme').textContent=document.documentElement.dataset.theme?'☀':'☾'};$('modalClose').onclick=()=>$('modal').classList.add('hide');$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.add('hide')};initMap();
+document.body.classList.add('noData');
+$('sourceInfo').textContent='Carregando base_volkswagen.csv automaticamente...';
+$('donutG').innerHTML=`<div class="emptyState"><b>Carregando CSV...</b><span>Aguarde enquanto a base mais recente é lida do GitHub Pages.</span></div>`;
+$('regBars').innerHTML=$('statusBars').innerHTML=$('tspBars').innerHTML='<div class="empty">Carregando dados...</div>';
+renderMap();
+async function carregarCSVAutomaticamente(){
+ try{
+  const url=`./base_volkswagen.csv?v=${Date.now()}`;
+  const resposta=await fetch(url,{method:'GET',cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+  if(!resposta.ok)throw new Error(`HTTP ${resposta.status}`);
+  const buffer=await resposta.arrayBuffer(),u=new Uint8Array(buffer);
+  let texto=new TextDecoder('utf-8').decode(u);
+  if((texto.match(/�/g)||[]).length>10)texto=new TextDecoder('windows-1252').decode(u);
+  loadText(texto,'base_volkswagen.csv automático');
+ }catch(erro){
+  console.error('Falha no carregamento automático do CSV:',erro);
+  document.body.classList.add('noData');
+  $('sourceInfo').textContent='CSV automático indisponível | use o botão Importar CSV';
+  $('donutG').innerHTML=`<div class="emptyState"><b>CSV automático não encontrado</b><span>Confirme que base_volkswagen.csv está na mesma pasta do index.html. Você também pode usar Importar CSV.</span></div>`;
+  $('regBars').innerHTML=$('statusBars').innerHTML=$('tspBars').innerHTML='<div class="empty">Aguardando importação manual</div>';
+  renderMap();
+ }
+}
+carregarCSVAutomaticamente();
 </script></body></html>
